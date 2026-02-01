@@ -9,6 +9,7 @@ import {
 } from '../models/authorModel';
 import CustomError from '../../classes/CustomError';
 
+// GET /authors
 const authorsGet = (
   req: Request,
   res: Response<Author[]>,
@@ -22,6 +23,7 @@ const authorsGet = (
   }
 };
 
+// GET /authors/:id
 const authorGet = (
   req: Request<{id: string}>,
   res: Response<Author>,
@@ -40,6 +42,7 @@ const authorGet = (
   }
 };
 
+// POST /authors
 const authorPost = (
   req: Request<unknown, unknown, Omit<Author, 'author_id'>>,
   res: Response<MessageResponse & {author: Author}>,
@@ -49,6 +52,7 @@ const authorPost = (
     const author = createAuthor(req.body);
     if (!author) {
       next(new CustomError('Failed to create author', 500));
+      return;
     }
     res.status(201).json({message: 'Author created successfully', author});
   } catch (error) {
@@ -56,31 +60,36 @@ const authorPost = (
   }
 };
 
+// PUT /authors/:id
 const authorPut = (
   req: Request<{id: string}, unknown, Author>,
-  res: Response<Author>,
+  res: Response<MessageResponse & {author: Author}>,
   next: NextFunction,
 ) => {
   try {
-    const author = updateAuthor(
+    const updatedAuthor = updateAuthor(
       Number(req.params.id),
       req.body.name,
       req.body.email,
     );
-    res.json(author);
+    res.json({
+      message: 'Author updated successfully',
+      author: updatedAuthor,
+    });
   } catch (error) {
     next(new CustomError((error as Error).message, 500));
   }
 };
 
+// DELETE /authors/:id
 const authorDelete = (
   req: Request<{id: string}>,
-  res: Response<unknown>,
+  res: Response<MessageResponse>,
   next: NextFunction,
 ) => {
   try {
     deleteAuthor(Number(req.params.id));
-    res.status(204).end();
+    res.status(200).json({message: 'Author deleted successfully'});
   } catch (error) {
     next(new CustomError((error as Error).message, 500));
   }

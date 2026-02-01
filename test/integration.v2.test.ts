@@ -201,7 +201,7 @@ describe('Delete test data', () => {
     try {
       const response = await request(app)
         .delete(`/api/v1/articles/${article.article_id}`)
-        .send({author_id: article.author}) // Use article.author_id instead of author.id
+        .send({author_id: article.author})
         .expect(200);
       const deleteResponse = response.body as MessageResponse;
       expect(deleteResponse.message).toBe('Article deleted successfully');
