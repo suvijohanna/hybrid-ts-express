@@ -1,11 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import express from 'express';
+import express, {Response} from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import cors from 'cors';
 import api from './api';
 import {errorHandler, notFound} from './middlewares';
+import {MessageResponse} from './types/LocalTypes';
 
 const app = express();
 
@@ -23,6 +24,12 @@ app.use(express.json());
 
 // serve public folder for apidoc
 app.use(express.static('public'));
+
+app.get('/', (_req, res: Response<MessageResponse>) => {
+  res.json({
+    message: 'Welcome to my REST API',
+  });
+});
 
 app.use('/api/v1', api);
 

@@ -1,0 +1,155 @@
+// db.ts
+import Database from 'better-sqlite3';
+import {
+  checkData,
+  exampleData,
+  filename,
+  tables,
+  authors,
+  checkAuthors,
+  exampleAuthors,
+} from './db-config';
+
+const db = new Database(filename);
+db.pragma('journal_mode = WAL');
+
+// init tables, use exec only for CREATE TABLE
+db.exec(tables);
+db.exec(authors);
+
+// chekck if the authors table is empty
+const authorCount = (db.prepare(checkAuthors).get() as {count: number}).count;
+// If the table is empty, insert example authors
+if (authorCount === 0) {
+  db.prepare(exampleAuthors).run();
+  console.log('Inserted example authors.');
+} else {
+  console.log('Authors table already populated.');
+}
+
+// Check if the articles table is empty
+const rowCount = (db.prepare(checkData).get() as {count: number}).count;
+// If the table is empty, insert example data
+if (rowCount === 0) {
+  db.prepare(exampleData).run();
+  console.log('Inserted example data.');
+} else {
+  console.log('Articles table already populated.');
+}
+
+export default db;
+
+
+// db-congig.ts
+const filename = 'example.sqlite';
+
+const tables = `CREATE TABLE IF NOT EXISTS articles (
+    article_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    author INTEGER,
+    FOREIGN KEY (author) REFERENCES authors(author_id)
+)`;
+
+const authors = `CREATE TABLE IF NOT EXISTS authors (
+    author_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name  TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE
+)`;
+
+const checkAuthors = `SELECT COUNT(*) AS count FROM authors`;
+
+const exampleAuthors = `INSERT INTO authors (name, email) VALUES
+('John Doe', 'john.doe@example.com'),
+('Jane Smith', 'jane.smith@example.com'),
+('Alice Johnson', 'alice.johnson@example.com')`;
+
+const checkData = `SELECT COUNT(*) AS count FROM articles`;
+
+const exampleData = `INSERT INTO articles (title, description, author) VALUES
+('Article 1', 'This is the first article', 1),
+('Article 2', 'This is the second article', 3),
+('Article 3', 'This is the third article', 2)`;
+
+export {
+  filename,
+  tables,
+  authors,
+  checkAuthors,
+  exampleAuthors,
+  checkData,
+  exampleData,
+};
+
+
+// authorController.ts
+import {NextFunction, Request, Response} from 'express';
+import {Author} from '../../types/LocalTypes';
+import {getAllAuthors, getAuthor} from '../models/authorModel';
+import CustomError from '../../classes/CustomError';
+
+const authorsGet = (
+  req: Request,
+  res: Response<Author[]>,
+  next: NextFunction,
+) => {
+  try {
+    const authors = getAllAuthors();
+    res.json(authors);
+  } catch (error) {
+    next(new CustomError((error as Error).message, 500));
+  }
+};
+
+const authorGet = (
+  req: Request<{id: string}>,
+  res: Response<Author>,
+  next: NextFunction,
+) => {
+  try {
+    const {id} = req.params;
+    const author = getAuthor(Number(id));
+    if (!author) {
+      next(new CustomError('No author found', 404));
+      return;
+    }
+    res.json(author);
+  } catch (error) {
+    next(new CustomError((error as Error).message, 500));
+  }
+};
+
+export {authorsGet, authorGet};
+
+
+
+// authorModel.ts
+import db from '../../database/db';
+import {Author} from '../../types/LocalTypes';
+
+const getAllAuthors = () => {
+  return db.prepare<unknown[], Author>('SELECT * FROM authors').all();
+};
+
+const getAuthor = (id: number) => {
+  return db
+    .prepare<number, Author>('SELECT * FROM authors WHERE author_id = ?')
+    .get(id);
+};
+
+export {getAllAuthors, getAuthor};
+
+
+
+// authorRouter.ts
+import express from 'express';
+import {authorGet, authorsGet} from '../controllers/authorController';
+
+const router = express.Router();
+
+router.route('/').get(authorsGet);
+
+router.route('/:id').get(authorGet);
+
+export default router;
+

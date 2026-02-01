@@ -7,7 +7,7 @@ const getAllArticles = (): Article[] => {
 
 const getArticle = (id: number | bigint): Article => {
   const result = db
-    .prepare('SELECT * FROM articles WHERE id = ?')
+    .prepare('SELECT * FROM articles WHERE article_id = ?')
     .get(id) as Article;
   if (!result) {
     throw new Error('Article not found');
@@ -15,10 +15,10 @@ const getArticle = (id: number | bigint): Article => {
   return result;
 };
 
-const createArticle = (article: Omit<Article, 'id'>): Article => {
+const createArticle = (article: Omit<Article, 'article_id'>): Article => {
   const stmt = db
-    .prepare('INSERT INTO articles (title, description) VALUES (?, ?)')
-    .run(article.title, article.description);
+    .prepare('INSERT INTO articles (title, description, author) VALUES (?, ?, ?)')
+    .run(article.title, article.description, article.author);
   if (!stmt.lastInsertRowid) {
     throw new Error('Failed to insert article');
   }
@@ -31,7 +31,7 @@ const updateArticle = (
   description: string,
 ): Article => {
   const stmt = db
-    .prepare('UPDATE articles SET title = ?, description = ? WHERE id = ?')
+    .prepare('UPDATE articles SET title = ?, description = ? WHERE article_id = ?')
     .run(title, description, id);
   if (stmt.changes === 0) {
     throw new Error('Failed to update article');
@@ -40,7 +40,7 @@ const updateArticle = (
 };
 
 const deleteArticle = (id: number | bigint): void => {
-  const stmt = db.prepare('DELETE FROM articles WHERE id = ?').run(id);
+  const stmt = db.prepare('DELETE FROM articles WHERE article_id = ?').run(id);
 
   if (stmt.changes === 0) {
     throw new Error('Article not found');
